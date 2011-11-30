@@ -3,12 +3,14 @@ package WebService::GlucoseBuddy;
 
 use Moose 1.24;
 use namespace::autoclean 0.13;
+use MooseX::Iterator 0.11;
 use WWW::Mechanize 1.70;
 use Readonly 1.03;
+use Text::CSV 1.21;
 
 #use WebService::GlucoseBuddy::Log;
 
-Readonly my $SERVICE_URI = 'https://www.glucosebuddy.com';
+Readonly my $SERVICE_URI => 'https://www.glucosebuddy.com';
 
 =attr username
 
@@ -29,9 +31,9 @@ has password => (
 );
 
 has _mech => (
-    is      => 'ro',
-    isa     => 'WWW::Mechanize',
-    lazy    => 1,
+    is          => 'ro',
+    isa         => 'WWW::Mechanize',
+    lazy_build  => 1,
 );
 
 sub _build__mech {
@@ -42,7 +44,7 @@ sub _build__mech {
 
     $mech->submit_form(
         with_fields => {
-            username    => $self->username,
+            login       => $self->username,
             password    => $self->password,
         }
     );
@@ -50,20 +52,43 @@ sub _build__mech {
     return $mech;
 }
 
-=method get_log
+=method logs
 
-Returns a L<WebService::GlucoseBuddy::Log> which is a fresh copy of the log from the
+Returns an iterator L<WebService::GlucoseBuddy::Log> which is a fresh copy of the log from the
 glucosebuddy.com site.
 
 =cut
 
-sub get_log {
+has _logs => (
+    is          => 'ro',
+    isa         => 'ArrayRef',
+    lazy_build  => 1,
+);
+
+sub _build__logs {
     my $self = shift;
 
     my $mech = $self->_mech;
     $mech->get('/logs/MyExportedGlucoseBuddyLogs.csv');
-    print $mech->content;
+
+    my $logs_file = $mech->content;
+    open my $logs_fh, '<', \$logs_file;
+
+    my $csv = Text::CSV->new;
+
+    my @logs;
+
+    while (my $row = $csv->getline($logs_fh)) {
+        push @logs, $row;
+    }
+
+    return \@logs;
 }
+
+has logs => (
+    metaclass       => 'Iterable',
+    iterate_over    => '_logs',
+);
 
 __PACKAGE__->meta->make_immutable;
 
