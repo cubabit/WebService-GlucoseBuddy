@@ -1,0 +1,7 @@
+# temp files
+*.swp
+
+# build files
+/.build/
+/WebService-GlucoseBuddy-*/
+/WebService-GlucoseBuddy-*.tar.gz
