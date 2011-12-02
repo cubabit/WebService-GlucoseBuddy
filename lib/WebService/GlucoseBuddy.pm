@@ -7,10 +7,13 @@ use MooseX::Iterator 0.11;
 use WWW::Mechanize 1.70;
 use Readonly 1.03;
 use Text::CSV 1.21;
+use DateTime::Format::Strptime 1.5;
 
-#use WebService::GlucoseBuddy::Log;
+use WebService::GlucoseBuddy::Log;
+use WebService::GlucoseBuddy::Log::Reading;
 
-Readonly my $SERVICE_URI => 'https://www.glucosebuddy.com';
+Readonly my $SERVICE_URI    => 'https://www.glucosebuddy.com';
+Readonly my $DT_FORMAT      => '%m/%d/%Y %T';
 
 =attr username
 
@@ -52,13 +55,6 @@ sub _build__mech {
     return $mech;
 }
 
-=method logs
-
-Returns an iterator L<WebService::GlucoseBuddy::Log> which is a fresh copy of the log from the
-glucosebuddy.com site.
-
-=cut
-
 has _logs => (
     is          => 'ro',
     isa         => 'ArrayRef',
@@ -78,6 +74,9 @@ sub _build__logs {
 
     my @logs;
 
+    # throw away header
+    <$logs_fh>;
+
     while (my $row = $csv->getline($logs_fh)) {
         push @logs, $row;
     }
@@ -85,10 +84,44 @@ sub _build__logs {
     return \@logs;
 }
 
-has logs => (
-    metaclass       => 'Iterable',
-    iterate_over    => '_logs',
-);
+=method logs
+
+Returns an iterator of L<WebService::GlucoseBuddy::Log> objects, each 
+representing a log
+
+=cut
+
+{
+    my $dt_formatter = DateTime::Format::Strptime->new(
+        pattern     => $DT_FORMAT,
+        on_error    => 'croak',
+    );
+
+    sub logs {
+        my $self = shift;
+        
+        my @logs;
+        for (@{ $self->_logs }) {
+            my $reading = WebService::GlucoseBuddy::Log::Reading->new(
+                type    => $_->[0],
+                value   => $_->[1],
+                unit    => $_->[2],
+            );
+
+            my $time = $dt_formatter->parse_datetime($_->[5]);
+
+            push @logs => WebService::GlucoseBuddy::Log->new(
+                reading => $reading,
+                time    => $time,
+                name    => $_->[3],
+                event   => $_->[4],
+                notes   => $_->[6],
+            );
+        }
+
+        return MooseX::Iterator::Array->new(collection => \@logs);
+    }
+}
 
 __PACKAGE__->meta->make_immutable;
 
