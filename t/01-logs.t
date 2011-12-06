@@ -1,18 +1,18 @@
-#!/usr/bin/env perl
-
 use strict;
 use warnings;
 
-use Test::More 0.98 tests => 13;
-use DateTime 0.70;
+use Test::More 0.98 tests => 12;
 use Test::MockObject 1.20110612;
+use URI 1.59;
 
 BEGIN {
     my $mech = Test::MockObject->new;
     $mech->fake_module('WWW::Mechanize', new => sub { return $mech });
-    $mech->mock(
-        content => sub {
-            return <<END_TEXT;
+    $mech->mock(uri => sub {
+        return URI->new('https://www.glucosebuddy.com/logs/new');
+    }),
+    $mech->mock(content => sub {
+        return <<END_TEXT;
 BG,12.0,mmol/L,"",Before Breakfast,11/10/2011 08:30:34,""
 BG,4.2,mmol/L,"",Before Dinner,11/10/2011 20:30:37,""
 BG,7.8,mmol/L,"",Before Bed,11/11/2011 00:14:23,""
@@ -32,9 +32,8 @@ BG,4.0,mmol/L,"",Before Breakfast,11/22/2011 08:40:31,""
 BG,4.1,mmol/L,"",Before Dinner,11/22/2011 20:35:07,""
 BG,8.1,mmol/L,"",Before Breakfast,11/23/2011 08:20:00,""
 END_TEXT
-        },
-    );
-    $mech->set_true(qw(submit_form get));
+    });
+    $mech->set_true(qw(submit_form get success));
     $mech->set_isa('WWW::Mechanize');
 
     # load module and set version otherwise our module will complain
@@ -49,7 +48,6 @@ my $gb = new_ok('WebService::GlucoseBuddy' => [
     username    => 'foo',
     password    => 'foo123',
 ]);
-isa_ok($gb => 'WebService::GlucoseBuddy');
 
 my $logs_set = $gb->logs;
 

@@ -8,6 +8,7 @@ use WWW::Mechanize 1.70;
 use Readonly 1.03;
 use Text::CSV 1.21;
 use DateTime::Format::Strptime 1.5;
+use Carp 1.20;
 
 use WebService::GlucoseBuddy::Log;
 use WebService::GlucoseBuddy::Log::Reading;
@@ -45,12 +46,20 @@ sub _build__mech {
     my $mech = WWW::Mechanize->new;
     $mech->get($SERVICE_URI . '/login');
 
+    unless ($mech->success) {
+        carp 'Could not connect to glucosebuddy.com';
+    }
+
     $mech->submit_form(
         with_fields => {
             login       => $self->username,
             password    => $self->password,
         }
     );
+
+    unless ($mech->uri->path eq '/logs/new') {
+        carp 'Log in failed';
+    }
 
     return $mech;
 }
