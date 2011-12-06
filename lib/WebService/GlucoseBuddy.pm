@@ -1,5 +1,5 @@
 package WebService::GlucoseBuddy;
-# ABSTRACT: Interface to a www.glucosebuddy.com log
+# ABSTRACT: Interface to a glucosebuddy.com account
 
 use Moose 1.24;
 use namespace::autoclean 0.13;
