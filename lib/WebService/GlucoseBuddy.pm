@@ -16,22 +16,38 @@ use WebService::GlucoseBuddy::Log::Reading;
 Readonly my $SERVICE_URI    => 'https://www.glucosebuddy.com';
 Readonly my $DT_FORMAT      => '%m/%d/%Y %T';
 
-=attr username
+=head1 CONSTRUCTOR
+
+=head2 new
+
+Constructor requires these arguments:
+
+=over 1
+
+=item username
+
+Your glucosebuddy.com username
 
 =cut
 
 has username => (
-    is  => 'ro',
-    isa => 'Str',
+    is          => 'ro',
+    isa         => 'Str',
+    required    => 1,
 );
 
-=attr password
+=item password
+
+Your glucosebuddy.com password
+
+=back
 
 =cut
 
 has password => (
-    is  => 'ro',
-    isa => 'Str',
+    is          => 'ro',
+    isa         => 'Str',
+    required    => 1,
 );
 
 has _mech => (
@@ -70,66 +86,79 @@ has _logs => (
     lazy_build  => 1,
 );
 
-sub _build__logs {
-    my $self = shift;
-
-    my $mech = $self->_mech;
-    $mech->get('/logs/MyExportedGlucoseBuddyLogs.csv');
-
-    my $logs_file = $mech->content;
-    open my $logs_fh, '<', \$logs_file;
-
-    my $csv = Text::CSV->new;
-
-    my @logs;
-
-    # throw away header
-    <$logs_fh>;
-
-    while (my $row = $csv->getline($logs_fh)) {
-        push @logs, $row;
-    }
-
-    return \@logs;
-}
-
-=method logs
-
-Returns an iterator of L<WebService::GlucoseBuddy::Log> objects, each 
-representing a log
-
-=cut
-
 {
     my $dt_formatter = DateTime::Format::Strptime->new(
         pattern     => $DT_FORMAT,
         on_error    => 'croak',
     );
 
-    sub logs {
+    sub _build__logs {
         my $self = shift;
-        
+
+        my $mech = $self->_mech;
+        $mech->get('/logs/MyExportedGlucoseBuddyLogs.csv');
+
+        my $logs_file = $mech->content;
+        open my $logs_fh, '<', \$logs_file;
+
+        my $csv = Text::CSV->new;
+
         my @logs;
-        for (@{ $self->_logs }) {
-            my $reading = WebService::GlucoseBuddy::Log::Reading->new(
-                type    => $_->[0],
-                value   => $_->[1],
-                unit    => $_->[2],
-            );
 
-            my $time = $dt_formatter->parse_datetime($_->[5]);
+        # throw away header
+        <$logs_fh>;
 
-            push @logs => WebService::GlucoseBuddy::Log->new(
-                reading => $reading,
-                time    => $time,
-                name    => $_->[3],
-                event   => $_->[4],
-                notes   => $_->[6],
-            );
+        while (my $row = $csv->getline($logs_fh)) {
+            # change time column to DT object so we can filter it later
+            $row->[5] = $dt_formatter->parse_datetime($row->[5]);
+
+            push @logs, $row;
         }
 
-        return MooseX::Iterator::Array->new(collection => \@logs);
+        return \@logs;
     }
+}
+
+=method logs
+
+Returns an L<MooseX::Iterator> iterator of L<WebService::GlucoseBuddy::Log> objects, each 
+representing a log
+
+=cut
+
+sub logs {
+    my $self = shift;
+    my %args = @_;
+    
+    my @logs = @{ $self->_logs };
+
+    if ($args{from}) {
+        @logs = grep { $_->[5] >= $args{from} } @logs;
+    }
+
+    if ($args{to}) {
+        @logs = grep { $_->[5] <= $args{to} } @logs;
+    }
+
+    my @log_objects;
+
+    for (@logs) {
+        my $reading = WebService::GlucoseBuddy::Log::Reading->new(
+            type    => $_->[0],
+            value   => $_->[1],
+            unit    => $_->[2],
+        );
+
+        push @log_objects => WebService::GlucoseBuddy::Log->new(
+            reading => $reading,
+            time    => $_->[5],
+            name    => $_->[3],
+            event   => $_->[4],
+            notes   => $_->[6],
+        );
+    }
+
+    return MooseX::Iterator::Array->new(collection => \@log_objects);
 }
 
 __PACKAGE__->meta->make_immutable;

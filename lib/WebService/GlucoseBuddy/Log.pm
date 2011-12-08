@@ -6,6 +6,8 @@ use namespace::autoclean 0.13;
 
 =attr reading
 
+A L<WebService::GlucoseBuddy::Log::Reading> object for the reading
+
 =cut
 
 has reading => (
@@ -14,6 +16,8 @@ has reading => (
 );
 
 =attr name
+
+The name given for the log entry
 
 =cut
 
@@ -24,6 +28,8 @@ has name => (
 
 =attr event
 
+The event name for the log entry
+
 =cut
 
 has event => (
@@ -33,6 +39,9 @@ has event => (
 
 =attr time
 
+A L<DateTime> object for the time of the reading. This has a floating timezone as glucosebuddy.com
+does not provide one.
+
 =cut
 
 has time => (
@@ -41,6 +50,8 @@ has time => (
 );
 
 =attr notes
+
+Notes for the log entry
 
 =cut
 

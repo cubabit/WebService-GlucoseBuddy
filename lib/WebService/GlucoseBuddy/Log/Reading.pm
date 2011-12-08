@@ -6,6 +6,8 @@ use namespace::autoclean 0.13;
 
 =attr type
 
+The type of reading
+
 =cut
 
 has type => (
@@ -15,6 +17,8 @@ has type => (
 
 =attr value
 
+Teh value of the reading
+
 =cut
 
 has value => (
@@ -23,6 +27,8 @@ has value => (
 );
 
 =attr unit
+
+The units used for the reading
 
 =cut
 

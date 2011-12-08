@@ -4,6 +4,7 @@ use warnings;
 use Test::More 0.98 tests => 12;
 use Test::MockObject 1.20110612;
 use URI 1.59;
+use DateTime 0.70;
 
 BEGIN {
     my $mech = Test::MockObject->new;
@@ -49,7 +50,17 @@ my $gb = new_ok('WebService::GlucoseBuddy' => [
     password    => 'foo123',
 ]);
 
-my $logs_set = $gb->logs;
+my $from_time = DateTime->new(
+    year    => 2011, 
+    month   => 11, 
+    day     => 13, 
+    hour    => 9, 
+);
+
+my $logs_set = $gb->logs(
+    from    => $from_time,
+    to      => $from_time->clone->add(days => 4),
+);
 
 my $log = $logs_set->next;
 isa_ok($log => 'WebService::GlucoseBuddy::Log');
@@ -58,12 +69,12 @@ my $reading = $log->reading;
 isa_ok($reading => 'WebService::GlucoseBuddy::Log::Reading');
 
 is($reading->type  => 'BG',     'Reading type');
-is($reading->value => 4.2,      'Reading value');
+is($reading->value => 5.3,      'Reading value');
 is($reading->unit  => 'mmol/L', 'Reading unit');
 
 is($log->name   => '',                      'Log name');
 is($log->event  => 'Before Dinner',         'Log event');
-is($log->time   => '2011-11-10T20:30:37',   'Log time');
+is($log->time   => '2011-11-13T09:41:23',   'Log time');
 is($log->notes  => '',                      'Log notes');
 
 done_testing();
