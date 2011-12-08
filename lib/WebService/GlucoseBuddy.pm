@@ -119,10 +119,24 @@ has _logs => (
     }
 }
 
-=method logs
+=method logs [%args]
 
 Returns an L<MooseX::Iterator> iterator of L<WebService::GlucoseBuddy::Log> objects, each 
 representing a log
+
+Args can contain:
+
+=over 1
+
+=item from
+
+A L<DateTime> object to search logs on or after this time
+
+=item to
+
+A L<DateTime> object to search logs on or before this time
+
+=back
 
 =cut
 
