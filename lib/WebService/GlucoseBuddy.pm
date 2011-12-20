@@ -63,7 +63,7 @@ sub _build__mech {
     $mech->get($SERVICE_URI . '/login');
 
     unless ($mech->success) {
-        carp 'Could not connect to glucosebuddy.com';
+        croak 'Could not connect to glucosebuddy.com';
     }
 
     $mech->submit_form(
@@ -74,7 +74,7 @@ sub _build__mech {
     );
 
     unless ($mech->uri->path eq '/logs/new') {
-        carp 'Log in failed';
+        croak 'Log in failed';
     }
 
     return $mech;
